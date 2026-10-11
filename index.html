@@ -54,7 +54,7 @@ const mv=(code,type,qty,note)=>S.mvts.push({d:now(),code,type,qty,note:note||''}
 
 function norm(){S.settings=Object.assign({name:'Ma boutique',icon:'🏪',cur:'DT'},S.settings||{});S.categories=S.categories||[];['products','sales','suppliers','clients','orders','mvts','prices'].forEach(k=>S[k]=S[k]||[])}
 function buildNav(){document.title=APP()+' — Gestion';
- $('#nav').innerHTML=`<h1>${esc(S.settings.icon)} ${esc(APP())}</h1><div style="margin:-8px 8px 10px;font-size:11px;color:var(--mu)">version 6 · 11/10/2026</div>`+PAGES.map(([k,t])=>`<a href="#${k}" data-k="${k}">${t}</a>`).join('')}
+ $('#nav').innerHTML=`<h1>${esc(S.settings.icon)} ${esc(APP())}</h1><div style="margin:-8px 8px 10px;font-size:11px;color:var(--mu)">version 7 · 11/10/2026</div>`+PAGES.map(([k,t])=>`<a href="#${k}" data-k="${k}">${t}</a>`).join('')}
 async function init(){
  const raw=localStorage.getItem(KEY);
  if(raw)S=JSON.parse(raw);
@@ -92,15 +92,17 @@ const R={},A={};
 R.dash=()=>{
  const t=stats(today(),today()),all=stats(),al=S.products.filter(isAl).length,m={};
  S.sales.forEach(s=>{const o=m[s.code]||(m[s.code]={code:s.code,name:s.name,q:0,ca:0,pf:0});o.q+=s.qty;o.ca+=s.total;o.pf+=s.profit});
- const top=Object.values(m).sort((a,b)=>b.q-a.q).slice(0,10);
+ const top=Object.values(m).sort((a,b)=>b.q-a.q).slice(0,10),topP=Object.values(m).sort((a,b)=>b.pf-a.pf).slice(0,10);
  return`<h2>Tableau de bord</h2><div class="g">
  <div class="k"><small>Valeur totale du stock</small><b>${f(S.products.reduce((x,p)=>x+val(p),0))} ${CUR()}</b></div>
  <div class="k"><small>Chiffre d'affaires total</small><b>${f(all.ca)} ${CUR()}</b></div>
  <div class="k"><small>Ventes du jour</small><b>${f(t.ca)} ${CUR()}</b></div>
  <div class="k"><small>Profit du jour</small><b>${f(t.pf)} ${CUR()}</b></div>
  <div class="k"><small>Articles en alerte</small><b><a href="#alert" style="color:var(--ko)">${al}</a></b></div></div>
+ <div class="c"><h3 style="margin-top:0">💰 10 meilleurs produits (par profit réalisé)</h3><div class="tw"><table><tr><th>#</th><th>Code</th><th>Désignation</th><th class="n">Profit (${CUR()})</th><th class="n">Qté vendue</th><th class="n">CA (${CUR()})</th></tr>
+ ${rows(topP,(x,i)=>`<tr><td>${i+1}</td><td>${esc(x.code)}</td><td>${esc(x.name)}</td><td class="n"><b>${f(x.pf)}</b></td><td class="n">${f(x.q,0)}</td><td class="n">${f(x.ca)}</td></tr>`)||'<tr><td colspan=6>Aucune vente pour le moment</td></tr>'}</table></div></div>
  <div class="c"><h3 style="margin-top:0">🏆 10 meilleurs produits (par quantité vendue)</h3><div class="tw"><table><tr><th>#</th><th>Code</th><th>Désignation</th><th class="n">Qté vendue</th><th class="n">CA (${CUR()})</th><th class="n">Profit (${CUR()})</th></tr>
- ${rows(top,(x,i)=>`<tr><td>${i+1}</td><td>${esc(x.code)}</td><td>${esc(x.name)}</td><td class="n">${f(x.q,0)}</td><td class="n">${f(x.ca)}</td><td class="n">${f(x.pf)}</td></tr>`)}</table></div></div>`;
+ ${rows(top,(x,i)=>`<tr><td>${i+1}</td><td>${esc(x.code)}</td><td>${esc(x.name)}</td><td class="n">${f(x.q,0)}</td><td class="n">${f(x.ca)}</td><td class="n">${f(x.pf)}</td></tr>`)||'<tr><td colspan=6>Aucune vente pour le moment</td></tr>'}</table></div></div>`;
 };
 
 /* ---------- Produits ---------- */
@@ -109,12 +111,12 @@ function matchP(p,fld,q){q=q.trim().toLowerCase();if(!q)return true;return Strin
 R.prod=()=>{pg.prod=pg.prod||{fld:'name',q:'',n:50};return`<h2>Gestion des produits</h2><div class="bar">
  <select id="pf">${Object.entries(FIELDS).map(([k,v])=>`<option value="${k}" ${pg.prod.fld===k?'selected':''}>${v}</option>`).join('')}</select>
  <input type="search" id="pq" placeholder="Rechercher…" value="${esc(pg.prod.q)}"><button class="p" onclick="formP()">+ Ajouter un produit</button><button class="p" onclick="formA()">📥 Nouvel arrivage</button><button onclick="formC()">🏷 Gérer les catégories</button></div>
- <div class="bar"><button onclick="exportX()">⬇ Télécharger la liste (Excel)</button><a href="produits-initiaux.xlsx" download="produits-initiaux.xlsx" style="text-decoration:none"><button type="button">📄 Télécharger la liste d'origine (Excel)</button></a><button class="p" onclick="pickX('add')">📋 Remplir le tableau (Excel)</button><button class="d" onclick="delAll()">🗑 Supprimer tous les produits</button>
+ <div class="bar"><button onclick="exportX()">⬇ Télécharger la liste (Excel)</button><a href="modele-produits.xlsx" download="modele-produits.xlsx" style="text-decoration:none"><button type="button">📄 Télécharger le fichier modèle (Excel vide)</button></a><button class="p" onclick="pickX('add')">📋 Remplir le tableau (Excel)</button><button class="d" onclick="delAll()">🗑 Supprimer tous les produits</button>
  <input type="file" id="xf" accept=".xlsx,.xls,.csv" hidden onchange="importX(this)"></div><div class="c tw" id="pt"></div>`};
 A.prod=()=>{const g=pg.prod;
  $('#pf').onchange=e=>{g.fld=e.target.value;g.n=50;tp()};$('#pq').oninput=e=>{g.q=e.target.value;g.n=50;tp()};tp()};
 function tp(){const g=pg.prod,L=S.products.filter(p=>matchP(p,g.fld,g.q));
- if(!S.products.length){$('#pt').innerHTML='<p style="padding:10px"><b>Le tableau des produits est vide.</b><br>Ajoutez vos produits un par un (« + Ajouter un produit »), ou importez une liste Excel avec « 📋 Remplir le tableau (Excel) ». Pour obtenir un modèle de fichier, cliquez sur « ⬇ Télécharger la liste (Excel) ».</p>';return}
+ if(!S.products.length){$('#pt').innerHTML='<p style="padding:10px"><b>Le tableau des produits est vide.</b><br>Ajoutez vos produits un par un (« + Ajouter un produit »), ou importez une liste Excel avec « 📋 Remplir le tableau (Excel) ». Pour commencer, téléchargez le fichier modèle (« 📄 Télécharger le fichier modèle »), remplissez-le, puis importez-le avec « 📋 Remplir le tableau (Excel) ».</p>';return}
  $('#pt').innerHTML=`<small>${L.length} produit(s)</small><table><tr><th>Code</th><th>Désignation</th><th>Catégorie</th><th class="n">P. achat</th><th class="n">P. vente</th><th class="n">Qté</th><th>Seuil</th><th></th></tr>
  ${rows(L.slice(0,g.n),p=>`<tr><td>${esc(p.code)}</td><td>${esc(p.name)}</td><td><select class="s" onchange="setCat('${esc(p.code)}',this.value)" style="max-width:150px"><option value="">—</option>${opt(cats(p.cat),p.cat)}<option value="__new__">➕ Nouvelle…</option></select></td><td class="n">${f(p.buy,3)}</td><td class="n">${f(p.sell,3)}</td>
  <td class="n"><span class="tag ${isAl(p)?'r':'v'}">${p.stock}</span></td><td>${p.thr}</td>
@@ -318,7 +320,7 @@ function saveSet(){const n=$('#s1').value.trim();if(!n)return alert('Le nom ne p
 /* ---------- Données ---------- */
 R.data=()=>`<h2>Données & sauvegarde</h2><div class="c"><p>Les données sont enregistrées dans ce navigateur. Exportez régulièrement une sauvegarde.</p>
  <div class="bar"><button class="p" onclick="exportJ()">⬇ Exporter la sauvegarde (JSON)</button><label class="tag" style="cursor:pointer;padding:8px 12px">⬆ Importer une sauvegarde<input type="file" accept=".json" hidden onchange="importJ(this.files[0])"></label>
- <a href="donnees-initiales.xlsx" download style="text-decoration:none"><button type="button">📄 Ventes, clients, fournisseurs d'origine (Excel)</button></a><button class="d" onclick="resetAll()">Réinitialiser (application vide)</button></div></div>`;
+ <button class="d" onclick="resetAll()">Réinitialiser (application vide)</button></div></div>`;
 function exportJ(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S)],{type:'application/json'}));a.download=(APP().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'sauvegarde')+'-'+today()+'.json';a.click()}
 function importJ(file){if(!file)return;const r=new FileReader();r.onload=()=>{try{const j=JSON.parse(r.result);if(!j.products||!j.sales)throw 0;S=j;norm();save();buildNav();alert('Sauvegarde importée');go()}catch{alert('Fichier invalide')}};r.readAsText(file)}
 function resetAll(){if(confirm('Effacer TOUTES les données (produits, ventes, clients, fournisseurs…) et repartir d\'une application vide ? Pensez à exporter une sauvegarde avant.')){localStorage.removeItem(KEY);location.reload()}}
